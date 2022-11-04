@@ -67,7 +67,7 @@ class Handler:
         try:
             await self.__handle_logout__(bot)
         except:
-            print(f"Something went wrong during __handle_logout__ of {__file__}")
+            print(f"Something went wrong during __handle_logout__ of {type(self)}")
         finally:
             if self.next_handler:
                 await self.next_handler.handle_logout(bot)

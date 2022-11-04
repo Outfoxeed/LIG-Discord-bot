@@ -37,9 +37,7 @@ bot.remove_command("help")
 handler: Handler = BotUtilities(bot, bot_channel_id, None, help_file_path)
 handler.set_next_handler(HumorHandler()).set_next_handler(CatPatroller()).set_next_handler(DmHandler()) \
     .set_next_handler(TrollsHandler()).set_next_handler(PurgeHandler()).set_next_handler(WorldCafeHandler(bot)) \
-    .set_next_handler(StreamRoleHandler()).set_next_handler(PulvRolesHandler()).set_next_handler(VoteHandler()) \
-    .set_next_handler(DmHandler())
-
+    .set_next_handler(StreamRoleHandler()).set_next_handler(PulvRolesHandler()).set_next_handler(VoteHandler())
 
 @bot.event
 async def on_ready():

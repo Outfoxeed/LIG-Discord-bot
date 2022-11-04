@@ -40,5 +40,5 @@ class BotUtilities(Handler):
 
         return False
 
-    async def __handle_logout__(self):
-        await self.bot.get_channel(self.bot_channel_id).send("Logging out!")
+    async def __handle_logout__(self, bot: discord.Client):
+        await bot.get_channel(self.bot_channel_id).send("Logging out!")

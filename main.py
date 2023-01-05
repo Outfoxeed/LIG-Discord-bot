@@ -74,6 +74,10 @@ async def on_message(message):
     if not message.author.bot and len(message.content) > 0:
         message_content: str = message.content.lower()
 
+        guild = bot.guilds[0]
+        is_admin = DiscordHelpers.is_admin(DiscordHelpers.get_member(guild, message.author.name))
+        print(f"On message (id:{message.id}; admin:{is_admin})")
+
         # Handle handlers command
         handle_info: HandleInfo = None
         if message_content.startswith(COMMAND_PREFIX):
@@ -81,16 +85,14 @@ async def on_message(message):
             while args.startswith(COMMAND_PREFIX):
                 args = args.removeprefix(COMMAND_PREFIX)
             args = args.split()
-            print(f"Try handle command ({message.id})")
-            handle_info = await handler.handle_commands(message, args, DiscordHelpers.is_admin(message.author))
-            print(f"Command Handle Info: {{{handle_info}}}\n")
+            handle_info = await handler.handle_commands(message, args, is_admin)
+            print(f"Command Handle Info: {{{handle_info}}}")
 
         # Handle message
-        if handle_info is None:
-            if not handle_info.command_recognized:
-                print(f"Try handle message ({message.id})")
-                handle_info = await handler.handle_message(message)
-                print(f"Message Handle Info: {{{handle_info}}}\n")
+        if handle_info is None or not handle_info.command_recognized:
+            handle_info = await handler.handle_message(message)
+            print(f"Message Handle Info: {{{handle_info}}}")
+        print("")
 
 
 @bot.event
@@ -109,10 +111,9 @@ async def on_raw_reaction_add(payload):
     if author.bot:
         return
 
-    print("Try Handle reaction added")
+    print(f"On reaction added (message id: {message.id}; emoji: {payload.emoji})")
     handle_info: HandleInfo = await handler.handle_reaction(author, message, payload.emoji, added=True)
     print(f"Reaction added info: {{{handle_info}}}\n")
-
 
 @bot.event
 async def on_raw_reaction_remove(payload):
@@ -125,7 +126,7 @@ async def on_raw_reaction_remove(payload):
     if author.bot:
         return
 
-    print("Try handle reaction removed")
+    print(f"On reaction removed (message id: {message.id}; emoji: {payload.emoji})")
     handle_info: HandleInfo = await handler.handle_reaction(author, message, payload.emoji, added=False)
     print(f"Reaction removed info: {{{handle_info}}}\n")
 

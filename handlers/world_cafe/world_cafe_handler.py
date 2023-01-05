@@ -60,12 +60,11 @@ class WorldCafeHandler(Handler):
         except:
             # Id is not an integer
             question_id = -1
-            return HandleInfo.RecognizedAndNotHandled(self)
 
         # Remove a question in world café (>remove_question message_id)
         if args[0] == "remove_question" and admin:
             # Not enough args
-            if args_length < 2:
+            if args_length < 2 or question_id < 0:
                 return HandleInfo.RecognizedAndNotHandled(self)
             if await self.remove_question(question_id):
                 text = self.data["remove_command_success"].replace("{}", str(question_id))
@@ -78,7 +77,7 @@ class WorldCafeHandler(Handler):
         # Answer a question in world cafe (>answer message_id balablabal balbala)
         elif args[0] == "answer":
             # Not enough args
-            if args_length < 3:
+            if args_length < 3 or question_id < 0:
                 return HandleInfo.RecognizedAndNotHandled(self)
             if await self.send_answer(question_id, " ".join(args[2:])):
                 text = self.data["answer_command_success"].replace("{}", str(question_id))

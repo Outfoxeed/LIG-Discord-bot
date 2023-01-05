@@ -75,19 +75,22 @@ async def on_message(message):
         message_content: str = message.content.lower()
 
         # Handle handlers command
-        successful_command = False
+        handle_info: HandleInfo = None
         if message_content.startswith(COMMAND_PREFIX):
             args = message_content
             while args.startswith(COMMAND_PREFIX):
                 args = args.removeprefix(COMMAND_PREFIX)
             args = args.split()
-            successful_command = await handler.handle_commands(message, args, DiscordHelpers.is_admin(message.author))
-            print(f"Try handle command: success={successful_command}")
+            print(f"Try handle command ({message.id})")
+            handle_info = await handler.handle_commands(message, args, DiscordHelpers.is_admin(message.author))
+            print(f"Command Handle Info: {{{handle_info}}}\n")
 
         # Handle message
-        if not successful_command:
-            print(f"Try handle message")
-            await handler.handle_message(message)
+        if handle_info is None:
+            if not handle_info.command_recognized:
+                print(f"Try handle message ({message.id})")
+                handle_info = await handler.handle_message(message)
+                print(f"Message Handle Info: {{{handle_info}}}\n")
 
 
 @bot.event
@@ -107,7 +110,8 @@ async def on_raw_reaction_add(payload):
         return
 
     print("Try Handle reaction added")
-    await handler.handle_reaction(author, message, payload.emoji, added=True)
+    handle_info: HandleInfo = await handler.handle_reaction(author, message, payload.emoji, added=True)
+    print(f"Reaction added info: {{{handle_info}}}\n")
 
 
 @bot.event
@@ -122,7 +126,8 @@ async def on_raw_reaction_remove(payload):
         return
 
     print("Try handle reaction removed")
-    await handler.handle_reaction(author, message, payload.emoji, added=False)
+    handle_info: HandleInfo = await handler.handle_reaction(author, message, payload.emoji, added=False)
+    print(f"Reaction removed info: {{{handle_info}}}\n")
 
 # Launch bot
 if __name__ == '__main__':

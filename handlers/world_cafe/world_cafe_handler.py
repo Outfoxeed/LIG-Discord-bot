@@ -1,5 +1,5 @@
 from discord_helpers import DiscordHelpers 
-from handlers.handler import Handler
+from handlers.handler import Handler, HandleInfo
 import discord
 
 
@@ -13,9 +13,9 @@ class WorldCafeHandler(Handler):
         if not self.world_cafe_channel:
             print("World Cafe Channel not found")
 
-    async def __handle_message__(self, message: discord.Message) -> bool:
+    async def __handle_message__(self, message: discord.Message) -> HandleInfo:
         if DiscordHelpers.is_private_message(message):
-            pass
+            return HandleInfo.NotHandled(self)
         if message.channel.id == self.world_cafe_channel.id:
             success = False
             if message.reference:
@@ -25,23 +25,23 @@ class WorldCafeHandler(Handler):
             await message.delete()
             if not success:
                 message.author.send(self.data["direct_message_error"])
-            return True
-        return False
+            return HandleInfo.Handled(self)
+        return HandleInfo.NotHandled(self)
 
-    async def __handle_commands__(self, message: discord.Message, args: str, admin: bool) -> bool:
+    async def __handle_commands__(self, message: discord.Message, args: str, admin: bool) -> HandleInfo:
         args_length = len(args)
         
         # Ask a question in world cafe (>question blabalabalbalala balalaal)
         if args[0] == "question":
             # Not enough args
             if args_length < 2:
-                return True
+                return HandleInfo.RecognizedAndNotHandled(self)
             question_message = await self.send_question(" ".join(args[1:]))
             if question_message:
                 await message.author.send(f"{self.data['question_command_success']}{question_message.jump_url}")
             else:
                 await message.author.send(self.data["question_command_fail"])
-            return True
+            return HandleInfo.Handled(self)
 
         # Remove all questions in world café (>clear_questions)
         if args[0] == "clear_questions" and admin:
@@ -52,7 +52,7 @@ class WorldCafeHandler(Handler):
                 await message.author.send(text)
             else:
                 message.author.send(self.data["clear_command_fail"])
-            return True
+            return HandleInfo.Handled(self)
 
         # Get question id
         try:
@@ -60,42 +60,42 @@ class WorldCafeHandler(Handler):
         except:
             # Id is not an integer
             question_id = -1
-            return False
+            return HandleInfo.RecognizedAndNotHandled(self)
 
         # Remove a question in world café (>remove_question message_id)
         if args[0] == "remove_question" and admin:
             # Not enough args
             if args_length < 2:
-                return True
+                return HandleInfo.RecognizedAndNotHandled(self)
             if await self.remove_question(question_id):
                 text = self.data["remove_command_success"].replace("{}", str(question_id))
             else:
                 text = self.data["remove_command_fail"].replace("{}", str(question_id))
             print(text)
             await message.author.send(text)
-            return True
+            return HandleInfo.Handled(self)
             
         # Answer a question in world cafe (>answer message_id balablabal balbala)
         elif args[0] == "answer":
             # Not enough args
             if args_length < 3:
-                return True
+                return HandleInfo.RecognizedAndNotHandled(self)
             if await self.send_answer(question_id, " ".join(args[2:])):
                 text = self.data["answer_command_success"].replace("{}", str(question_id))
             else:
                 text = self.data["answer_command_fail"].replace("{}", str(question_id))
             print(text)
             await message.author.send(text)
-            return True
+            return HandleInfo.Handled(self)
 
-        return False
+        return HandleInfo.NotHandled(self)
 
-    async def __handle_reaction__(self, member: discord.Member, message: discord.Message, emoji: discord.PartialEmoji, added: bool):
+    async def __handle_reaction__(self, member: discord.Member, message: discord.Message, emoji: discord.PartialEmoji, added: bool) -> HandleInfo:
         if added and message.channel.id == self.world_cafe_channel.id:
             await message.clear_reactions()
             await member.send(f"We don't judge in #{self.world_cafe_channel.name}")
-            return True
-        return False
+            return HandleInfo.Handled(self)
+        return HandleInfo.NotHandled(self)
 
     async def send_question(self, question: str) -> discord.Message:
         # Send the question

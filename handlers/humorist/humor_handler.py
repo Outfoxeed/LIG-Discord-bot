@@ -1,5 +1,5 @@
 import os
-from handlers.handler import Handler
+from handlers.handler import Handler, HandleInfo
 import discord
 import random
 
@@ -14,20 +14,20 @@ class HumorHandler(Handler):
                     continue
                 self.jokes.append(line)
 
-    async def __handle_commands__(self, message: discord.Message, args: str, admin: bool) -> bool:
+    async def __handle_commands__(self, message: discord.Message, args: str, admin: bool) -> HandleInfo:
         if args[0] == "joke":   
             await message.delete()
             await self.trigger_joke(message.channel)
-            return True
+            return HandleInfo.Handled(self)
         if args[0] == "xd":
             await message.channel.send("XDDDDDDD")
             await message.delete()
-            return True
-        return False
+            return HandleInfo.Handled(self)
+        return HandleInfo.NotHandled(self)
 
-    async def __handle_message__(self, message: discord.Message) -> bool:
+    async def __handle_message__(self, message: discord.Message) -> HandleInfo:
         if message.author.bot or message.channel.id not in self.data["white_list_channels"]:
-            return False
+            return HandleInfo.NotHandled(self)
 
         content = message.content.lower()
         for word in self.data["joke_trigger_words"]:
@@ -35,8 +35,8 @@ class HumorHandler(Handler):
                 test = random.randint(0, self.data["joke_proba"]-1) 
                 if test == 0:
                     await self.trigger_joke(message.channel)
-                    return True
-        return False
+                    return HandleInfo.Handled(self)
+        return HandleInfo.NotHandled(self)
 
     async def trigger_joke(self, channel: discord.TextChannel):
         await channel.send(self.jokes[random.randint(0, len(self.jokes)-1)])

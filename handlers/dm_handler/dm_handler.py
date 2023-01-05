@@ -1,4 +1,4 @@
-from handlers.handler import Handler
+from handlers.handler import Handler, HandleInfo
 from discord_helpers import DiscordHelpers
 import discord
 from handlers.dm_handler.dm_request import DmRequest
@@ -9,22 +9,20 @@ class DmHandler(Handler):
         super().__init__(__file__)
         self.current_dm_requests = []
 
-    async def __handle_commands__(self, message: discord.Message, args: str, admin: bool) -> bool:
-        if not admin:
-            return False
-        if DiscordHelpers.is_private_message(message):
-            return False
+    async def __handle_commands__(self, message: discord.Message, args: str, admin: bool) -> HandleInfo:
+        if not admin or DiscordHelpers.is_private_message(message):
+            return HandleInfo.NotHandled(self)
         if args[0] == "dm":
             if len(args) < 3:
-                return True
+                return HandleInfo.RecognizedAndNotHandled(self)
             receivers_str = args[1].split(";")
             await self.create_dm_request(message, receivers_str, " ".join(args[2:]))
-            return True
-        return False
+            return HandleInfo.Handled(self)
+        return HandleInfo.NotHandled(self)
 
-    async def __handle_message__(self, message: discord.Message) -> bool:
+    async def __handle_message__(self, message: discord.Message) -> HandleInfo:
         if len(self.current_dm_requests) == 0:
-            return False
+            return HandleInfo.NotHandled(self)
         for dm_request in self.current_dm_requests:
             if dm_request.author.id == message.author.id:
                 message_content = message.content.lower()
@@ -33,9 +31,12 @@ class DmHandler(Handler):
                     self.current_dm_requests.remove(dm_request)
                     await dm_request.channel.send(self.data["dm_sent_message"])
                     print(self.data["dm_sent_log"].replace("{author}", dm_request.author.display_name).replace("{receivers}", dm_request.receivers))
+                    return HandleInfo.Handled(self)
                 elif "no" in message_content:
                     self.current_dm_requests.remove(dm_request)
                     await dm_request.channel.send(self.data["dm_cancelled_message"])
+                    return HandleInfo.Handled(self)
+        return HandleInfo.NotHandled(self)
 
     async def create_dm_request(self, ctx: discord.Message, member_names, text):
         # Collect all receivers
@@ -55,7 +56,7 @@ class DmHandler(Handler):
             await ctx.send("No valid receivers found. Operation cancelled")
             return False
 
-        self.current_dm_requests.append(DmRequest(ctx.author, receivers, text))
+        self.current_dm_requests.append(DmRequest(ctx.author, ctx.channel, receivers, text))
 
         # Concatenate receivers names
         receivers_names = ""

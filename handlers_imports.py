@@ -1,4 +1,4 @@
-from handlers.handler import Handler
+from handlers.handler import Handler, HandleInfo
 from handlers.humorist.humor_handler import HumorHandler
 from handlers.cat_patrol.cat_patroller import CatPatroller
 from handlers.bot_utilities.bot_utilities import BotUtilities

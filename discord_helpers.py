@@ -78,7 +78,7 @@ class DiscordHelpers:
         except:
             return False
     @staticmethod
-    def get_roles(guild, role_names = []):
+    def get_roles(guild, role_names=[]):
         roles = []
         for role in guild.roles:
             if role.name in role_names:

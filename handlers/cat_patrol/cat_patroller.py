@@ -1,5 +1,4 @@
-import json
-from handlers.handler import Handler
+from handlers.handler import Handler, HandleInfo
 import random
 import discord
 import os
@@ -24,22 +23,23 @@ class CatPatroller(Handler):
                 line = line.removesuffix("\n")
                 self.ALLOWED_CATS.append(line)
 
-    async def __handle_commands__(self, message: discord.Message, args: str, admin: bool) -> bool:
+    async def __handle_commands__(self, message: discord.Message, args: str, admin: bool) -> HandleInfo:
         args_len: int = len(args)
         if args[0] == "cat_patrol" and admin:
             if args_len > 1:
                 self.cat_patrol = "on" in args[1].lower()
             await message.channel.send(f"Cat patrol is {'on' if self.cat_patrol else 'off'}.")
-            return True
+            return HandleInfo.Handled(self)
         elif args[0] == "cat":
             await message.channel.send(self.ALLOWED_CATS[random.randint(0, len(self.ALLOWED_CATS)-1)])
             await message.delete()
-            return True
-        return False
+            return HandleInfo.Handled(self)
 
-    async def __handle_message__(self, message: discord.Message) -> bool:
+        return HandleInfo.NotHandled(self)
+
+    async def __handle_message__(self, message: discord.Message) -> HandleInfo:
         if not self.cat_patrol:
-            return False
+            return HandleInfo.NotHandled(self)
 
         # Remove not allowed cats in cat channel
         if message.channel.id == self.cat_channel_id:
@@ -57,4 +57,5 @@ class CatPatroller(Handler):
                 await message.author.send(embed=text)
                 await message.author.send(self.data["mp_warning_gif"])
                 print(f"Sent cat patrol warning message to '{message.author.display_name}'")
-                return False
+                return HandleInfo.Handled(self)
+        return HandleInfo.NotHandled(self)

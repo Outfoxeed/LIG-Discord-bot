@@ -1,6 +1,6 @@
 from discord_helpers import DiscordHelpers
 from handlers.vote_handler.vote import Vote
-from handlers.handler import Handler
+from handlers.handler import Handler, HandleInfo
 import discord
 from discord_components import Button, ButtonStyle
 
@@ -16,7 +16,7 @@ class VoteHandler(Handler):
         self.guild = bot.guilds[0]
         self.channel = bot.get_channel(self.data["channel_id"])
 
-    async def __handle_commands__(self, message: discord.Message, args:str, admin: bool) -> bool:
+    async def __handle_commands__(self, message: discord.Message, args:str, admin: bool) -> HandleInfo:
         destroy_message = False
         if args[0] == "vote":
             if admin:
@@ -30,7 +30,7 @@ class VoteHandler(Handler):
                 # Stop one or all votes
                 elif args[1] == "stop":
                     if len(args) < 3:
-                        return True
+                        return HandleInfo.RecognizedAndNotHandled(self)
                     if args[2] == "all":
                         await self.stop_all_votes()
                     else:
@@ -40,7 +40,7 @@ class VoteHandler(Handler):
                 # Reveal one vote result
                 elif args[1] == "reveal":
                     if len(args) < 3:
-                        return True
+                        return HandleInfo.RecognizedAndNotHandled(self)
                     await self.channel.send(str(self.get_current_vote(" ".join(args[2:]))))
                     destroy_message = True
 
@@ -57,10 +57,10 @@ class VoteHandler(Handler):
             if destroy_message and not DiscordHelpers.is_private_message(message):
                 await message.delete()
 
-            return True
-        return False
+            return HandleInfo.Handled(self)
+        return HandleInfo.NotHandled(self)
 
-    async def create_new_vote(self, bot: discord.Client, guild: discord.Guild, title: str, choices = []):
+    async def create_new_vote(self, bot: discord.Client, guild: discord.Guild, title: str, choices=[]):
         # Create buttons
         components = []
         for i in range(0, len(choices)):
@@ -90,9 +90,9 @@ class VoteHandler(Handler):
 
     def get_current_vote(self, name_or_id) -> Vote:
         try:
-            id = int(name_or_id)
+            vote_id = int(name_or_id)
             for vote in self.current_votes:
-                if vote.id == id:
+                if vote.id == vote_id:
                     return vote
         except:
             name = name_or_id

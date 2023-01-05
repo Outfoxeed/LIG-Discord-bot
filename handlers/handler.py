@@ -3,8 +3,29 @@ import discord
 import os
 import json
 
+class HandleInfo:
+    def __init__(self, handler: Handler, need_next_handle: bool = True, command_recognized: bool = False, took_action: bool = False) -> None:
+        self.handler = handler
+        self.need_next_handle = need_next_handle
+        self.command_recognized = command_recognized
+        self.took_action = took_action
+
+    def __str__(self):
+        return f"{self.handler.__class__.__name__}; command_recognized:{self.command_recognized}; took_action:{self.took_action}; need_next_handle:{self.need_next_handle}"
+
+    @staticmethod
+    def NotHandled(handler: Handler) -> HandleInfo:
+        return HandleInfo(handler, need_next_handle=True, command_recognized=False, took_action=False)
+    @staticmethod
+    def RecognizedAndNotHandled(handler: Handler) -> HandleInfo:
+        return HandleInfo(handler, need_next_handle=False, command_recognized=True, took_action=False)
+    @staticmethod
+    def Handled(handler: Handler) -> HandleInfo:
+        return HandleInfo(handler, need_next_handle=False, command_recognized=True, took_action=True)
+
 
 class Handler:
+
     next_handler: Handler = None
 
     def __init__(self, file):
@@ -34,24 +55,29 @@ class Handler:
         else:
             return self.help_text
 
-    async def handle_commands(self, message: discord.Message, args: str, admin: bool) -> bool:
+    async def handle_commands(self, message: discord.Message, args, admin: bool) -> HandleInfo:
         if len(args) > 0:
-            if await self.__handle_commands__(message, args, admin):
-                return True
+            handle_info: HandleInfo = await self.__handle_commands__(message, args, admin)
+            if handle_info.command_recognized or not self.next_handler:
+                return handle_info
+
             if self.next_handler:
                 return await self.next_handler.handle_commands(message, args, admin)
 
-    async def handle_message(self, message: discord.Message) -> bool:
-        if await self.__handle_message__(message):
-            return True
+    async def handle_message(self, message: discord.Message) -> HandleInfo:
+        handle_info: HandleInfo = await self.__handle_message__(message)
+        if handle_info.command_recognized or not self.next_handler:
+            return handle_info
+
         if self.next_handler:
             return await self.next_handler.handle_message(message)
 
-    async def handle_reaction(self, member: discord.Member, message: discord.Message, emoji: discord.PartialEmoji, added: bool):
-        if await self.__handle_reaction__(member, message, emoji, added):
-            return
+    async def handle_reaction(self, member: discord.Member, message: discord.Message, emoji: discord.PartialEmoji, added: bool) -> HandleInfo:
+        handle_info: HandleInfo = await self.__handle_reaction__(member, message, emoji, added)
+        if handle_info.command_recognized or not self.next_handler:
+            return handle_info
         if self.next_handler:
-            await self.next_handler.handle_reaction(member, message, emoji, added)
+            return await self.next_handler.handle_reaction(member, message, emoji, added)
 
     async def handle_vc_update(self, member: discord.Member, before: discord.VoiceChannel, after: discord.VoiceChannel):
         await self.__handle_vc_update__(member, before, after)
@@ -73,23 +99,22 @@ class Handler:
                 await self.next_handler.handle_logout(bot)
 
     # Handle arguments of a command
-    # Returns true if the message has been successfully handled
-    # and the message's content shouldn't be handled
+    # Returns infos about the action
     # by self and/or next_handler
-    async def __handle_commands__(self, message: discord.Message, args:str, admin: bool) -> bool:
-        return False
+    async def __handle_commands__(self, message: discord.Message, args:str, admin: bool) -> HandleInfo:
+        return HandleInfo.NotHandled(self)
 
     # Handle message content
-    # Returns true if the message has been successfully handled
+    # Returns infos about the action
     # and shouldn't be handled by next_handler
-    async def __handle_message__(self, message: discord.Message) -> bool:
-        return False
+    async def __handle_message__(self, message: discord.Message) -> HandleInfo:
+        return HandleInfo.NotHandled(self)
 
     # Handle reaction event
-    # Returns true if the reaction has been successfully handled
+    # Returns infos about the action
     # and shouldn't be handled by next_handler
-    async def __handle_reaction__(self, member: discord.Member, message: discord.Message, emoji: discord.PartialEmoji, added: bool) -> bool:
-        return False
+    async def __handle_reaction__(self, member: discord.Member, message: discord.Message, emoji: discord.PartialEmoji, added: bool) -> HandleInfo:
+        return HandleInfo.NotHandled(self)
 
     # Handle vc update
     async def __handle_vc_update__(self, member: discord.Member, before: discord.VoiceChannel, after: discord.VoiceChannel):

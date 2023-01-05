@@ -1,5 +1,5 @@
 from discord_helpers import DiscordHelpers
-from handlers.handler import Handler
+from handlers.handler import Handler, HandleInfo
 import discord
 
 
@@ -86,30 +86,31 @@ class PulvRolesHandler(Handler):
                 if author not in all_members_of_role:
                     await self.update_role_of_member(author, discord_role, True)
 
-    async def __handle_reaction__(self, member: discord.Member, message: discord.Message, emoji: discord.PartialEmoji, added: bool) -> bool:
+    async def __handle_reaction__(self, member: discord.Member, message: discord.Message, emoji: discord.PartialEmoji, added: bool) -> HandleInfo:
         if message.id != self.message.id:
-            return False
+            return HandleInfo.NotHandled(self)
         if type(member) == discord.User:
-            return False
+            return HandleInfo.NotHandled(self)
         if member.bot:
-            return False
+            return HandleInfo.NotHandled(self)
 
         # Get custom role from emoji
         discord_role: discord.Role = self.get_discord_role_from_emoji(member.guild, emoji.name)
         if not discord_role:
-            return True
+            return HandleInfo.NotHandled(self)
 
         await self.update_role_of_member(member, discord_role, added)
+        return HandleInfo.Handled(self)
 
-    async def __handle_commands__(self, message: discord.Message, args:str, admin: bool) -> bool:
+    async def __handle_commands__(self, message: discord.Message, args: str, admin: bool) -> HandleInfo:
         if args[0] == "clear_pulv_roles" and admin:
             print("clear pulv roles")
             for custom_role in self.custom_roles:
                 members = DiscordHelpers.get_members_of_role(message.guild, role_names=[custom_role.name])
                 for member in members:
                     await member.remove_roles(DiscordHelpers.get_role(message.guild, custom_role.name))
-            return True
-        return False
+            return HandleInfo.Handled(self)
+        return HandleInfo.NotHandled(self)
 
     async def update_role_of_member(self, member: discord.Member, role: discord.Role, added: bool):
         # Add role if necessary
